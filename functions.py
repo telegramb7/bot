@@ -32,6 +32,8 @@ def check_user_in_db(id_chat):
     db_user = requests.get(user_url)
     users_json = db_user.json()
     
+    id_chat = str(id_chat)
+
     for i in users_json:
         if id_chat == i['id_chat']:
             return True
@@ -70,4 +72,29 @@ def create_new_anket(id_chat, data):
         "file_unique_id": data['file_unique_id'],
         "sex": bool(data['sex']),
         "user": pk})
+
+def get_personal_data(id_chat):
+
+    user_url = 'http://127.0.0.1:8000/user/'
+    db_user = requests.get(user_url)
+    users_json = db_user.json()
+
+    anket_url = 'http://127.0.0.1:8000/anket/'
+    db_anket = requests.get(anket_url)
+    anket_json = db_anket.json()
+
+    for i in users_json:
+        if id_chat == i['id_chat']:
+            pk = i['id']
+    
+    for i in anket_json:
+        if i['user'] == pk:
+            personal_data = {
+                'name':i['name'],
+                'age':i['age'],
+                'description':i['description'],
+                'file_unique_id':i['file_unique_id'],
+                'sex':i['sex']
+            }
+            return personal_data
 
