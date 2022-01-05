@@ -10,14 +10,16 @@ load_dotenv()
 token = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(token)
 
-data = {
-            'name':'',
-            'age':'',
-            "description":'',
-            "file_unique_id":'',
-            "sex":'',
+ANKET_DICT = {}
+PK_PARTNER={}
 
-        }
+class Anket:
+    def __init__(self, name):
+        self.name = name
+        self.age = None
+        self.description =None
+        self.file_unique_id = None
+        self.sex = None
 
 @bot.message_handler(content_types=['text', 'photo'])
 def start_message(message):
@@ -26,57 +28,83 @@ def start_message(message):
         check = functions.check_user_in_db(id_chat)
         if check == False:
         #create new user
-            functions.create_new_user(id_chat)
-            bot.send_message(message.from_user.id, text='Рад поприветствовать вас впервые.Давай создадим анкету. Как тебя зовут?', reply_markup=types.ReplyKeyboardRemove())
+            functions.create_new_user(id_chat, message.chat.username)
+            bot.send_message(message.from_user.id, text='Рад поприветствовать вас впервые. Обратите внимание, что для корректной работы необходимо иметь username. Если у вас его нет, уставноите в настрйоках телеграм. Давай создадим анкету. Как тебя зовут?', reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(message, get_name)
         if check == True:
-    #bot can say hello use name from database!!!
-            bot.send_message(message.from_user.id, text=f'Привет {message.chat.first_name}')
+            username = message.chat.username
+            if username == None:
+                username = ""
+            functions.put_user(message.chat.id, username)
+            check_anket = functions.check_anket_in_db(message.chat.id)
+            if check_anket == False:
+                bot.send_message(message.from_user.id, text= 'Привет у тебя нет Анкеты, давай создадим. Как тебя зовут?', reply_markup=types.ReplyKeyboardRemove())
+                bot.register_next_step_handler(message, get_name)
+            elif check_anket == True:
+                bot.send_message(message.chat.id, text='Давай познакомимся с другими участниками.')
+                search(message)
+    elif message.text == '/menu':
+        username = message.chat.username
+        if username == None:
+            username = ""
+        functions.put_user(message.chat.id, username)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu)
+
     
 def get_name(message):
-    global data
     if message.text != None:
+
+        id_chat = message.chat.id
         name = message.text
-        data['name'] = name
+        anket = Anket(name)
+        ANKET_DICT[id_chat] = anket
+
         bot.send_message(message.chat.id, text = 'Введите ваш возраст: ', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_age)
     else:
         bot.send_message(message.chat.id, text = 'Имя только из букав. Введите корректно: ', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_name)
-    print(data)
     
 
 def get_age(message):
-    global data
-    age = message.text
     try:
-        age = int(age)
-        data['age'] = age
+        id_chat = message.chat.id
+        age = message.text
+        if not age.isdigit():
+            bot.send_message(message.chat.id, text = 'Возраст может состоять только из цифр. Повторите ввод: ')
+            bot.register_next_step_handler(message, get_age)
+        anket = ANKET_DICT[id_chat]
+        anket.age = int(age)
         bot.send_message(message.chat.id, text = 'Кратко опишите себя и свои увлечения: ', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_description)
     except Exception:
-        bot.send_message(message.chat.id, text = 'Возраст может состоять только из цифр. Повторите ввод: ')
-        bot.register_next_step_handler(message, get_age)
-    print(data)
+        pass
     
-
 def get_description(message):
-    global data
+    id_chat = message.chat.id
+    description = message.text
     if message.text != None:
-        description = message.text
-        data['description'] = description
+        anket = ANKET_DICT[id_chat]
+        anket.description = str(description)
         bot.send_message(message.chat.id, text = 'Прикрепите свое фото: ', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_file)
     else:
         bot.send_message(message.chat.id, text = 'Описание только из букав и цифр. Введите корректно: ', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_description)
-    print(data)
 
 def get_file(message):
-    global data
+    id_chat = message.chat.id
     if message.photo != None:
         file_unique_id = message.photo[-1].file_id
-        data['file_unique_id'] = file_unique_id
+        anket = ANKET_DICT[id_chat]
+        anket.file_unique_id = str(file_unique_id)
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         male = types.KeyboardButton('male')
         female = types.KeyboardButton('femail')
@@ -86,28 +114,52 @@ def get_file(message):
     else:
         bot.send_message(message.chat.id, text = 'Прикрепите пожалуйста только фото.', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, get_file)
-    print(data)
-
-    
 
 def get_sex(message):
-    global data
-    if message.text == 'male':
-        data['sex'] = True
-        print(data)
-        sex = "Мужской"
-        bot.send_message(message.chat.id, text = 'Ваша анкета:')
-        bot.send_photo(message.chat.id, data['file_unique_id'], caption=f'{data["name"]}, {sex}\nМне: {data["age"]}\n{data["description"]}')
-        id_chat = message.chat.id
-        functions.create_new_anket(id_chat, data)
-    elif message.text == 'femail':
-        data['sex'] = False
-        print(data)
-        sex = "Мужской"
-        bot.send_message(message.chat.id, text = 'Ваша анкета:')
-        bot.send_photo(message.chat.id, data['file_unique_id'], caption=f'{data["name"]}, {sex}\nМне: {data["age"]}\n{data["description"]}')
-        id_chat = message.chat.id
-        functions.create_new_anket(id_chat, data)
+    id_chat = message.chat.id
+    sex = message.text
+    check = functions.check_anket_in_db(id_chat)
+    if check == False:
+        if message.text == 'male':
+            anket = ANKET_DICT[id_chat]
+            anket.sex = True
+            sex = "Мужской"
+            bot.send_message(message.chat.id, text = 'Ваша анкета:')
+            bot.send_photo(message.chat.id, anket.file_unique_id, caption=f'{anket.name}, {sex}\nМне: {anket.age}\n{anket.description}')
+            functions.create_new_anket(id_chat, ANKET_DICT[id_chat])
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            user_anket = types.KeyboardButton('Ваша анкета📃',)
+            find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+            pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+            bye = types.KeyboardButton('До следующей встречи👋')
+            markup.row(user_anket, find, pull_anket, bye)
+            bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
+            bot.register_next_step_handler(message, main_menu)
+        elif message.text == 'femail':
+            anket = ANKET_DICT[id_chat]
+            anket.sex = False
+            sex = "Женский"
+            bot.send_message(message.chat.id, text = 'Ваша анкета:')
+            bot.send_photo(message.chat.id, anket.file_unique_id, caption=f'{anket.name}, {sex}\nМне: {anket.age}\n{anket.description}', reply_markup=types.ReplyKeyboardRemove())
+            functions.create_new_anket(id_chat, ANKET_DICT[id_chat])
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            user_anket = types.KeyboardButton('Ваша анкета📃',)
+            find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+            pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+            bye = types.KeyboardButton('До следующей встречи👋')
+            markup.row(user_anket, find, pull_anket, bye)
+            bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
+            bot.register_next_step_handler(message, main_menu)
+    elif check == True:
+        functions.put_anket(message.chat.id, ANKET_DICT[id_chat])
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu)
     else:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         male = types.KeyboardButton('male')
@@ -115,5 +167,113 @@ def get_sex(message):
         markup.row(male, female)
         bot.send_message(message.chat.id, text = 'Неправильный выбор', reply_markup=markup)
         bot.register_next_step_handler(message, get_sex)
+
+def search(message):
+    search_data = functions.another_anket(message.chat.id)
+    if search_data == False:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_message(message.chat.id, text='На сегодня анкеты закончились. Приходите позже. До свидания!', reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu)
+    elif search_data != False:
+        if search_data['sex'] == True:
+            sex = "Мужской"
+            bot.send_photo(message.chat.id, search_data['file_unique_id'], caption=f'{search_data["name"]}, {sex}\nВозраст: {search_data["age"]}\n{search_data["description"]}')
+            PK_PARTNER[message.chat.id] = search_data['user']
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            like = types.KeyboardButton('👍',)
+            dislike = types.KeyboardButton('👎',)
+            sleep = types.KeyboardButton('👋')
+            markup.row(like, dislike, sleep)
+            bot.send_message(message.chat.id, text='>', reply_markup=markup)
+            bot.register_next_step_handler(message, check_answer)
+        elif search_data['sex'] == False:
+            sex = "Женский"
+            bot.send_photo(message.chat.id, search_data['file_unique_id'], caption=f'{search_data["name"]}, {sex}\nВозраст: {search_data["age"]}\n{search_data["description"]}')
+            PK_PARTNER[message.chat.id] = search_data['user']
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            like = types.KeyboardButton('👍',)
+            dislike = types.KeyboardButton('👎',)
+            sleep = types.KeyboardButton('👋')
+            markup.row(like, dislike, sleep)
+            bot.send_message(message.chat.id, text='>', reply_markup=markup)
+            bot.register_next_step_handler(message, check_answer)
+
+
+def check_answer(message):
+    if message.text == '👋':
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_message(message.chat.id, text = 'До встречи!', reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu)
+    elif message.text == '👎':
+        id_chat = message.chat.id
+        id_partner = PK_PARTNER[message.chat.id]
+        functions.post_dislike(id_chat, id_partner)
+        search(message)
+    elif message.text == '👍':
+        id_chat = message.chat.id
+        id_partner = PK_PARTNER[message.chat.id]
+        functions.post_like(id_chat, id_partner)
+        match_date = functions.check_match(id_chat, id_partner)
+        if match_date == False:
+            search(message)
+        elif match_date != False:
+            if match_date['partner_username'] != "" and match_date["username"] != "":
+                bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас с @{match_date["partner_username"]} совпадение лайков. Вы можете начать общение.')
+                bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас с @{match_date["username"]} совпадение лайков. Вы можете начать общение.')
+            elif match_date['partner_username'] != "" and match_date["username"] == "":
+                bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас есть совпадение лайков c @{match_date["partner_username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+            elif match_date['partner_username'] == "" and match_date["username"] != "":
+                bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас есть совпадение лайков c @{match_date["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+            elif match_date['partner_username'] == "" and match_date["username"] == "":
+                bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+                bot.send_message(match_date['partner_id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+            search(message)
+    elif message.text == "/menu":
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
+        bot.register_next_step_handler(message, main_menu)
+    else:
+        bot.send_message(message.chat.id, text='Неверный выбор. Воспользуйся клавиатурой.')
+        bot.register_next_step_handler(message, check_answer)
+
+def main_menu(message):
+    if message.text == 'До следующей встречи👋':
+        bot.send_message(message.chat.id, text='Возвращайтесь, будем рады видеть вас вновь.', reply_markup=types.ReplyKeyboardRemove())
+    elif message.text == 'Заполнить свою анкету заново📝':
+        bot.send_message(message.chat.id, text='Введите ваше имя: ')
+        bot.register_next_step_handler(message, get_name)
+    elif message.text == 'Ваша анкета📃':
+        personal_anket = functions.get_personal_data(message.chat.id)
+        if personal_anket['sex']== True:
+            sex = "Мужской"
+        else:
+            sex = "Женский"
+
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        user_anket = types.KeyboardButton('Ваша анкета📃',)
+        find = types.KeyboardButton('Посмотреть другие анкеты👀',)
+        pull_anket = types.KeyboardButton('Заполнить свою анкету заново📝',)
+        bye = types.KeyboardButton('До следующей встречи👋')
+        markup.row(user_anket, find, pull_anket, bye)
+        bot.send_photo(message.chat.id, personal_anket['file_unique_id'], caption=f'Ваша анкета: {personal_anket["name"]}, {sex}\nМне: {personal_anket["age"]}\n{personal_anket["description"]}', reply_markup=markup)
+        bot.send_message(message.chat.id, text="Меню: ")
+        bot.register_next_step_handler(message, main_menu)
+    elif message.text == 'Посмотреть другие анкеты👀':
+        search(message)
 
 bot.polling(none_stop=True, interval=0)
