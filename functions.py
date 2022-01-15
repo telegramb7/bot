@@ -7,6 +7,7 @@ load_dotenv()
 API_KEY = os.getenv('API_KEY')
 
 url = 'https://familiar-api.herokuapp.com'
+# url = 'http://127.0.0.1:8000'
 
 
 #Functions for bot
@@ -16,6 +17,8 @@ def check_user_in_db(id_chat):
 
     If User is in the database returns True.
     If User is not in the database returns False.
+
+    GOOD
     """
 
     user_url = f'{url}/user/?id_chat={id_chat}'
@@ -33,11 +36,14 @@ def create_new_user(id_chat, username=""):
 
     The mandatory argument is id_chat.
     The username can be empty. 
+
+    GOOD
     """
 
     user_url = f'{url}/user/'
 
     req = requests.post(user_url, {'id_chat':id_chat, 'username': username}, headers={'Authorization': 'Api-Key '+ API_KEY})
+
 
 def create_new_anket(id_chat, data):
     """
@@ -45,6 +51,8 @@ def create_new_anket(id_chat, data):
 
     Id_chat is needed to determine the User ID.
     Data is a special class containing the information to be collected for the profile.
+
+    GOOD
     """
 
     anket_url = f'{url}/anket/'
@@ -69,24 +77,20 @@ def get_personal_data(id_chat):
     Function for retrieving stored Anket data of a specific User.
 
     Id_chat is required to obtain a User ID.
+
+    GOOD
     """
 
-    user_url = f'{url}/user/?id_chat={id_chat}'
-    db_user = requests.get(user_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    users_json = db_user.json()
-
-    pk = users_json[0]['id']
-
-    anket_url = f'{url}/anket/?user={pk}'
-    db_anket = requests.get(anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
+    anket_url = f'{url}/anket/me/'
+    db_anket = requests.get(anket_url, json={'id_chat':id_chat}, headers={'Authorization': 'Api-Key '+ API_KEY})
     anket_json = db_anket.json()
     
     return {
-            'name':anket_json[0]['name'],
-            'age':anket_json[0]['age'],
-            'description':anket_json[0]['description'],
-            'file_unique_id':anket_json[0]['file_unique_id'],
-            'sex':anket_json[0]['sex']
+            'name':anket_json['name'],
+            'age':anket_json['age'],
+            'description':anket_json['description'],
+            'file_unique_id':anket_json['file_unique_id'],
+            'sex':anket_json['sex']
             }
 
 def check_anket_in_db(id_chat):
@@ -94,19 +98,13 @@ def check_anket_in_db(id_chat):
     Checking the availability of Anket for a particular User.
 
     Id_chat is required to obtain a User ID.
+
+    GOOD
     """
 
-    user_url = f'{url}/user/?id_chat={id_chat}'
-    db_user = requests.get(user_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    users_json = db_user.json()
-
-    pk = users_json[0]['id']
-
-    anket_url = f'{url}/anket/?user={pk}'
-    db_anket = requests.get(anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    anket_json = db_anket.json()
-
-    if anket_json != []:
+    anket_url = f'{url}/anket/me/'
+    db_anket = requests.get(anket_url, json={'id_chat':id_chat}, headers={'Authorization': 'Api-Key '+ API_KEY})
+    if db_anket.status_code == 200:
         return True
     else:
         return False
@@ -123,84 +121,54 @@ def another_anket(id_chat):
     If the list is empty, return the questionnaire from the list of those not liked. 
 
     Id_chat is required to obtain a User ID.
+
+    GOOD
     """
-    
-    all_pk = []
-    all_dis = []
 
-    user_url = f'{url}/user/?id_chat={id_chat}'
-    db_user = requests.get(user_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    users_json = db_user.json()
-    pk = users_json[0]['id']
+    anket_url = f'{url}/anket/?id_chat={id_chat}'
+    db_anket = requests.get(anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
+    ankets_json = db_anket.json()
 
-    dislike_url = f'{url}/dislike/?who={pk}'
-    db_dislike = requests.get(dislike_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    dislike_json = db_dislike.json()
-
-    COUNT_ANKET = 1
-    while True:
-        anket_url = f'{url}/anket/?page={COUNT_ANKET}'
-        db_anket = requests.get(anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-        if db_anket.status_code != 404:
-            anket_json = db_anket.json()
-            for i in anket_json:
-                all_pk.append(i['user'])
-            COUNT_ANKET += 1
-            continue
-        else:
-            break
-            
-    all_pk.remove(int(pk))
-
-    if dislike_json != []:
-        for i in dislike_json:
-            all_dis.append(i["whom_dislike"])
-            all_pk.remove(i["whom_dislike"])
-
-    COUNT_LIKE = 1
-    while True:
-        like_url = f'{url}/like/?page={COUNT_LIKE}'
-        db_like = requests.get(like_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-        if db_like.status_code != 404:
-            like_json = db_like.json()
-            for i in like_json:
-                if pk == i['user']:
-                    all_pk.remove(i['partner'])
-            COUNT_LIKE += 1
-            continue
-        else:
-            break
-
-    if all_pk != []:
-        for i in all_pk:
-            url_anket = f'{url}/anket/?user={i}'
-            user_db = requests.get(url_anket, headers={'Authorization': 'Api-Key '+ API_KEY})
-            json_anket = user_db.json()
-        
+    if ankets_json != []:
+        for anket_json in ankets_json:
             return {
-                'user':json_anket[0]['user'],
-                'name':json_anket[0]['name'],
-                'age':json_anket[0]['age'],
-                'description':json_anket[0]['description'],
-                'file_unique_id':json_anket[0]['file_unique_id'],
-                'sex':json_anket[0]['sex']
+                'user':anket_json['user'],
+                'name':anket_json['name'],
+                'age':anket_json['age'],
+                'description':anket_json['description'],
+                'file_unique_id':anket_json['file_unique_id'],
+                'sex':anket_json['sex']
             }
-    else:
-        if all_dis == []:
+    elif ankets_json == []:
+        dislike_url = f'{url}/dislike/?id_chat={id_chat}'
+        db_dislike = requests.get(dislike_url, headers={'Authorization': 'Api-Key '+ API_KEY})
+        dislike_json =db_dislike.json()
+        if dislike_json == []:
             return False
-        else:
-            ran_ch = random.choice(all_dis)
-            url_anket = f'{url}/anket/?user={ran_ch}'
-            user_db = requests.get(url_anket, headers={'Authorization': 'Api-Key '+ API_KEY})
-            json_anket = user_db.json()
+        elif dislike_json != []:
+            pk = dislike_json[0]['whom_dislike']
+            user_url = f'{url}/user/?id_user={pk}'
+            db_user = requests.get(user_url, headers={'Authorization': 'Api-Key '+ API_KEY})
+            users_json = db_user.json()
+            chat_id = users_json[0]['id_chat']
+    
+            anket_for_url = f'{url}/anket/me/'
+            db_for_anket = requests.get(anket_for_url, json={'id_chat':chat_id}, headers={'Authorization': 'Api-Key '+ API_KEY})
+            anket_for_json = db_for_anket.json()
             return {
-                'user':json_anket[0]['user'],
-                'name':json_anket[0]['name'],
-                'age':json_anket[0]['age'],
-                'description':json_anket[0]['description'],
-                'file_unique_id':json_anket[0]['file_unique_id'],
-                'sex':json_anket[0]['sex']
-                }
+                'user':anket_for_json['user'],
+                'name':anket_for_json['name'],
+                'age':anket_for_json['age'],
+                'description':anket_for_json['description'],
+                'file_unique_id':anket_for_json['file_unique_id'],
+                'sex':anket_for_json['sex']
+            }
+
+# def next():
+#     ankets = another_anket()
+#     for anket in ankets:
+#         yield anket
+
 
 def post_like(id_chat, id_partner):
     """
@@ -208,6 +176,8 @@ def post_like(id_chat, id_partner):
 
     Id_chat is required to obtain a User ID.
     Id_partner is the id of the user to rate. 
+
+    GOOD
     """
 
     user_url = f'{url}/user/?id_chat={id_chat}'
@@ -240,6 +210,8 @@ def post_dislike(id_chat, id_partner):
 
     Id_chat is required to obtain a User ID.
     Id_partner is the id of the user to rate. 
+
+    GOOD
     """
 
     dislike_url = f'{url}/dislike/'
@@ -251,17 +223,11 @@ def post_dislike(id_chat, id_partner):
     pk = users_json[0]['id']
     id_partner = int(id_partner)
 
-    dislike_who = f'{url}/dislike/?who={pk}&whom={id_partner}'
-    dislike_who_db = requests.get(dislike_who, headers={'Authorization': 'Api-Key '+ API_KEY})
-    dislike_who_json = dislike_who_db.json()
-
-    if dislike_who_json == []:
-        req = requests.post(dislike_url,
+    req = requests.post(dislike_url,
         {
             "who_dislike": pk,
             "whom_dislike": id_partner
         }, headers={'Authorization': 'Api-Key '+ API_KEY})
-
 
 def check_match(id_chat, id_partner):
     """
@@ -269,6 +235,8 @@ def check_match(id_chat, id_partner):
 
     Id_chat is required to obtain a User ID.
     Id_partner is the ID of the user we are checking for a match with.
+
+    GOOD
     """
 
     user_url = f'{url}/user/?id_chat={id_chat}'
@@ -294,10 +262,10 @@ def check_match(id_chat, id_partner):
     user_like_json = user_db_like.json()
     partner_like_json = partner_db_like.json()
 
-    user_anket_url = f"{url}/anket/?user={pk}"
-    partner_anket_url = f"{url}/anket/?user={id_partner}"
-    db_user_anket = requests.get(user_anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    db_partner_anket = requests.get(partner_anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
+    user_anket_url = f"{url}/anket/me/"
+    partner_anket_url = f"{url}/anket/me/"
+    db_user_anket = requests.get(user_anket_url,json={'id_chat':id_chat}, headers={'Authorization': 'Api-Key '+ API_KEY})
+    db_partner_anket = requests.get(partner_anket_url, json={'id_chat':partner_id_chat}, headers={'Authorization': 'Api-Key '+ API_KEY})
     user_anket_json = db_user_anket.json()
     partner_anket_json = db_partner_anket.json()
 
@@ -305,8 +273,8 @@ def check_match(id_chat, id_partner):
         return {'username':username,
         'partner_username':partner_username,
         'partner_id_chat':partner_id_chat,
-        'user_photo': user_anket_json[0]['file_unique_id'],
-        'partner_photo':partner_anket_json[0]['file_unique_id']}
+        'user_photo': user_anket_json['file_unique_id'],
+        'partner_photo':partner_anket_json['file_unique_id']}
         
     else:
         return False
@@ -317,6 +285,8 @@ def put_anket(id_chat, data):
 
     Id_chat is required to obtain a User ID.
     Data is a special class containing the information to be collected for the profile.
+
+    GOOD
     """
 
     user_url = f'{url}/user/?id_chat={id_chat}'
@@ -325,11 +295,11 @@ def put_anket(id_chat, data):
 
     pk = users_json[0]['id']
 
-    personal_anket_url = f'{url}/anket/?user={pk}'
-    db_personal_anket = requests.get(personal_anket_url, headers={'Authorization': 'Api-Key '+ API_KEY})
-    personal_anket_json = db_personal_anket.json()
+    anket_url = f'{url}/anket/me/'
+    db_anket = requests.get(anket_url, json={'id_chat':id_chat}, headers={'Authorization': 'Api-Key '+ API_KEY})
+    anket_json = db_anket.json()
 
-    id_anket = personal_anket_json[0]['id']
+    id_anket = anket_json['id']
 
     anket_url = f'{url}/anket/{id_anket}/'
 
@@ -345,6 +315,8 @@ def put_user(id_chat, username=''):
     """
     Function for updating User data.
     For an ideal scenario, the User Name is required. This function updates the User at key moments, in particular if a username is added.
+
+    GOOD
     """
 
     user_url = f'{url}/user/?id_chat={id_chat}'
@@ -355,3 +327,4 @@ def put_user(id_chat, username=''):
     user_url = f'{url}/user/{pk}/'
 
     req = requests.put(user_url, {'id_chat':id_chat, 'username': username}, headers={'Authorization': 'Api-Key '+ API_KEY})
+

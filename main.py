@@ -1,8 +1,10 @@
 import os
 from dotenv import load_dotenv
+import requests
 import telebot
 import functions
 from telebot import types
+from flask import Flask, request, jsonify
 
 load_dotenv()
 
@@ -151,7 +153,20 @@ def get_sex(message):
             bot.send_message(message.chat.id, text="Меню: ", reply_markup=markup)
             bot.register_next_step_handler(message, main_menu)
     elif check == True:
-        functions.put_anket(message.chat.id, ANKET_DICT[id_chat])
+        if message.text == 'male':
+            anket = ANKET_DICT[id_chat]
+            anket.sex = True
+            sex = "Мужской"
+            bot.send_message(message.chat.id, text = 'Ваша анкета:')
+            bot.send_photo(message.chat.id, anket.file_unique_id, caption=f'{anket.name}, {sex}\nМне: {anket.age}\n{anket.description}')
+            functions.put_anket(message.chat.id, ANKET_DICT[id_chat])
+        elif message.text == 'femail':
+            anket = ANKET_DICT[id_chat]
+            anket.sex = False
+            sex = "Женский"
+            bot.send_message(message.chat.id, text = 'Ваша анкета:')
+            bot.send_photo(message.chat.id, anket.file_unique_id, caption=f'{anket.name}, {sex}\nМне: {anket.age}\n{anket.description}', reply_markup=types.ReplyKeyboardRemove())
+            functions.put_anket(message.chat.id, ANKET_DICT[id_chat])
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         user_anket = types.KeyboardButton('Ваша анкета📃',)
         find = types.KeyboardButton('Посмотреть другие анкеты👀',)
@@ -170,6 +185,7 @@ def get_sex(message):
 
 def search(message):
     search_data = functions.another_anket(message.chat.id)
+    # anket = functions.next()
     if search_data == False:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         user_anket = types.KeyboardButton('Ваша анкета📃',)
@@ -277,3 +293,44 @@ def main_menu(message):
         search(message)
 
 bot.polling(none_stop=True, interval=0)
+# server = Flask(__name__)
+
+# # @server.route('/' + BOT_TOKEN, methods=['POST'])
+# # def getMessage():
+# #     json_string = request.get_data().decode('utf-8')
+# #     update = telebot.types.Update.de_json(json_string)
+# #     bot.process_new_updates([update])
+# #     return "!", 200
+
+
+# # @server.route("/")
+# # def webhook():
+# #     bot.remove_webhook()
+# #     bot.set_webhook(url=WEBHOOK_URL + BOT_TOKEN)
+# #     return "!", 200
+
+# @server.route('/match', methods=['POST'])
+# def match(message):
+#     first = request.json.get('first')
+#     second = request.json.get('second')
+#     if first['username'] != "" and second['username'] != "":
+#         bot.send_photo(message.chat.id, second['photo'], caption = f'У вас с @{second["username"]} совпадение лайков. Вы можете начать общение.')
+#         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас с @{first["username"]} совпадение лайков. Вы можете начать общение.')
+#     elif second['username'] != "" and first["username"] == "":
+#         bot.send_photo(message.chat.id, second['photo'], caption = f'У вас есть совпадение лайков c @{second["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+#     elif second['username'] == "" and first["username"] != "":
+#         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас есть совпадение лайков c @{first["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+#     elif first['username'] == "" and second["username"] == "":
+#         bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+#         bot.send_message(second['id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+#     print(first)
+#     print(second)
+#     # import pdb
+#     # pdb.set_trace()
+#     # bot.send_message(first, text="Test")
+#     # bot.send_message(second, text="Test")
+#     return jsonify({}), 200
+
+# if __name__ == "__main__":
+#     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+#     server.run()
