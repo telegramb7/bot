@@ -313,21 +313,21 @@ def webhook():
     return "!", 200
 
 @server.route('/match', methods=['POST'])
-def match(message):
+def match():
     first = request.json.get('first')
     second = request.json.get('second')
     if first['username'] != "" and second['username'] != "":
-        bot.send_photo(message.chat.id, second['photo'], caption = f'У вас с @{second["username"]} совпадение лайков. Вы можете начать общение.')
+        bot.send_photo(first['id_chat'], second['photo'], caption = f'У вас с @{second["username"]} совпадение лайков. Вы можете начать общение.')
         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас с @{first["username"]} совпадение лайков. Вы можете начать общение.')
         main_menu()
     elif second['username'] != "" and first["username"] == "":
-        bot.send_photo(message.chat.id, second['photo'], caption = f'У вас есть совпадение лайков c @{second["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+        bot.send_photo(first['id_chat'], second['photo'], caption = f'У вас есть совпадение лайков c @{second["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
         main_menu()
     elif second['username'] == "" and first["username"] != "":
         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас есть совпадение лайков c @{first["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
         main_menu()
     elif first['username'] == "" and second["username"] == "":
-        bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+        bot.send_message(first['id_chat'], text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
         bot.send_message(second['id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
         main_menu()
     return jsonify({}), 200
