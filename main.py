@@ -9,8 +9,11 @@ from flask import Flask, request, jsonify
 load_dotenv()
 
 # initialization bot
+web_hook = os.getenv('WEB_HOOK')
 token = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(token)
+
+server = Flask(__name__)
 
 ANKET_DICT = {}
 PK_PARTNER={}
@@ -292,22 +295,22 @@ def main_menu(message):
     elif message.text == 'Посмотреть другие анкеты👀':
         search(message)
 
-bot.polling(none_stop=True, interval=0)
-# server = Flask(__name__)
-
-# # @server.route('/' + BOT_TOKEN, methods=['POST'])
-# # def getMessage():
-# #     json_string = request.get_data().decode('utf-8')
-# #     update = telebot.types.Update.de_json(json_string)
-# #     bot.process_new_updates([update])
-# #     return "!", 200
+# bot.polling(none_stop=True, interval=0)
 
 
-# # @server.route("/")
-# # def webhook():
-# #     bot.remove_webhook()
-# #     bot.set_webhook(url=WEBHOOK_URL + BOT_TOKEN)
-# #     return "!", 200
+@server.route('/' + token, methods=['POST'])
+def getMessage():
+    json_string = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
+
+
+@server.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url=web_hook + token)
+    return "!", 200
 
 # @server.route('/match', methods=['POST'])
 # def match(message):
@@ -331,6 +334,5 @@ bot.polling(none_stop=True, interval=0)
 #     # bot.send_message(second, text="Test")
 #     return jsonify({}), 200
 
-# if __name__ == "__main__":
-#     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
-#     server.run()
+if __name__ == "__main__":
+    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
