@@ -242,21 +242,21 @@ def check_answer(message):
         id_chat = message.chat.id
         id_partner = PK_PARTNER[message.chat.id]
         functions.post_like(id_chat, id_partner)
-        match_date = functions.check_match(id_chat, id_partner)
-        if match_date == False:
-            search(message)
-        elif match_date != False:
-            if match_date['partner_username'] != "" and match_date["username"] != "":
-                bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас с @{match_date["partner_username"]} совпадение лайков. Вы можете начать общение.')
-                bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас с @{match_date["username"]} совпадение лайков. Вы можете начать общение.')
-            elif match_date['partner_username'] != "" and match_date["username"] == "":
-                bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас есть совпадение лайков c @{match_date["partner_username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
-            elif match_date['partner_username'] == "" and match_date["username"] != "":
-                bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас есть совпадение лайков c @{match_date["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
-            elif match_date['partner_username'] == "" and match_date["username"] == "":
-                bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
-                bot.send_message(match_date['partner_id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
-            search(message)
+        # match_date = functions.check_match(id_chat, id_partner)
+        # if match_date == False:
+        #     search(message)
+        # elif match_date != False:
+        #     if match_date['partner_username'] != "" and match_date["username"] != "":
+        #         bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас с @{match_date["partner_username"]} совпадение лайков. Вы можете начать общение.')
+        #         bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас с @{match_date["username"]} совпадение лайков. Вы можете начать общение.')
+        #     elif match_date['partner_username'] != "" and match_date["username"] == "":
+        #         bot.send_photo(message.chat.id, match_date['partner_photo'], caption = f'У вас есть совпадение лайков c @{match_date["partner_username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+        #     elif match_date['partner_username'] == "" and match_date["username"] != "":
+        #         bot.send_photo(match_date['partner_id_chat'], match_date['user_photo'], caption = f'У вас есть совпадение лайков c @{match_date["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+        #     elif match_date['partner_username'] == "" and match_date["username"] == "":
+        #         bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+        #         bot.send_message(match_date['partner_id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+        #     search(message)
     elif message.text == "/menu":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         user_anket = types.KeyboardButton('Ваша анкета📃',)
@@ -312,27 +312,25 @@ def webhook():
     bot.set_webhook(url=web_hook + token)
     return "!", 200
 
-# @server.route('/match', methods=['POST'])
-# def match(message):
-#     first = request.json.get('first')
-#     second = request.json.get('second')
-#     if first['username'] != "" and second['username'] != "":
-#         bot.send_photo(message.chat.id, second['photo'], caption = f'У вас с @{second["username"]} совпадение лайков. Вы можете начать общение.')
-#         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас с @{first["username"]} совпадение лайков. Вы можете начать общение.')
-#     elif second['username'] != "" and first["username"] == "":
-#         bot.send_photo(message.chat.id, second['photo'], caption = f'У вас есть совпадение лайков c @{second["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
-#     elif second['username'] == "" and first["username"] != "":
-#         bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас есть совпадение лайков c @{first["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
-#     elif first['username'] == "" and second["username"] == "":
-#         bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
-#         bot.send_message(second['id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
-#     print(first)
-#     print(second)
-#     # import pdb
-#     # pdb.set_trace()
-#     # bot.send_message(first, text="Test")
-#     # bot.send_message(second, text="Test")
-#     return jsonify({}), 200
+@server.route('/match', methods=['POST'])
+def match(message):
+    first = request.json.get('first')
+    second = request.json.get('second')
+    if first['username'] != "" and second['username'] != "":
+        bot.send_photo(message.chat.id, second['photo'], caption = f'У вас с @{second["username"]} совпадение лайков. Вы можете начать общение.')
+        bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас с @{first["username"]} совпадение лайков. Вы можете начать общение.')
+        main_menu()
+    elif second['username'] != "" and first["username"] == "":
+        bot.send_photo(message.chat.id, second['photo'], caption = f'У вас есть совпадение лайков c @{second["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+        main_menu()
+    elif second['username'] == "" and first["username"] != "":
+        bot.send_photo(second['id_chat'], first['photo'], caption = f'У вас есть совпадение лайков c @{first["username"]}, однако у вас не заполнен username и он/она не может начать общение с вами. Проявите инициативу и укажите свой username.')
+        main_menu()
+    elif first['username'] == "" and second["username"] == "":
+        bot.send_message(message.chat.id, text= 'У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+        bot.send_message(second['id_chat'], text='У вас есть совпадение лайков, однако у вас не заполнен username и вы не можете начать общение.')
+        main_menu()
+    return jsonify({}), 200
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
