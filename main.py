@@ -242,6 +242,7 @@ def check_answer(message):
         id_chat = message.chat.id
         id_partner = PK_PARTNER[message.chat.id]
         functions.post_like(id_chat, id_partner)
+        search(message)
         # match_date = functions.check_match(id_chat, id_partner)
         # if match_date == False:
         #     search(message)
